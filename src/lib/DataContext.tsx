@@ -6,30 +6,6 @@ import type { AccessRecord, AccessStatus, AuditLog, AllowedUser } from "./types"
 
 type RecordInput = Omit<AccessRecord, "id" | "created_at" | "updated_at">;
 
-const accessRegisterColumns = [
-  "id",
-  "holder_name",
-  "holder_type",
-  "company",
-  "contact_details",
-  "access_type",
-  "access_area",
-  "purpose",
-  "approved_by",
-  "authority_source",
-  "approval_date",
-  "start_date",
-  "expiry_date",
-  "return_due_date",
-  "returned_date",
-  "status",
-  "conditions",
-  "notes",
-  "attachment_url",
-  "created_at",
-  "updated_at",
-].join(",");
-
 interface DataContextValue {
   records: AccessRecord[];
   auditLogs: AuditLog[];
@@ -94,8 +70,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       const { data: recordData, error: recordError, status, statusText } = await supabase
         .from("access_register")
-        .select(accessRegisterColumns)
-        .order("updated_at", { ascending: false });
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .returns<AccessRecord[]>();
 
       if (recordError) {
         setRecords([]);
@@ -111,7 +88,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setRecords((recordData ?? []) as AccessRecord[]);
+      setRecords(recordData ?? []);
 
       const { data: logData, error: logError } = await supabase
         .from("access_audit_log")
@@ -140,17 +117,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (localRecord) return localRecord;
     if (!supabase || demoMode) return demoRecords.find((item) => item.id === id) ?? null;
 
-    const { data, error: fetchError } = await supabase
-      .from("access_register")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+      const { data, error: fetchError } = await supabase
+        .from("access_register")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+        .returns<AccessRecord | null>();
 
     if (fetchError) {
       throw new Error(describeSupabaseError(fetchError));
     }
 
-    return (data as AccessRecord | null) ?? null;
+    return data ?? null;
   }, [records, demoMode]);
 
   async function addAudit(access_record_id: string, action: string, details: string) {
@@ -193,26 +171,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .update(record)
         .eq("id", id)
         .select("*")
-        .single();
+        .single()
+        .returns<AccessRecord>();
       if (updateError) throw new Error(describeSupabaseError(updateError));
       if (!data?.id) throw new Error("Supabase update completed but did not return the updated record id.");
       await addAudit(id, "Record updated", "Access register entry updated.");
-      setRecords((items) => items.map((item) => (item.id === id ? (data as AccessRecord) : item)));
+      setRecords((items) => items.map((item) => (item.id === id ? data : item)));
       await refresh();
-      return data as AccessRecord;
+      return data;
     }
 
     const { data, error: insertError } = await supabase
       .from("access_register")
       .insert(record)
       .select("*")
-      .single();
+      .single()
+      .returns<AccessRecord>();
     if (insertError) throw new Error(describeSupabaseError(insertError));
     if (!data?.id) throw new Error("Supabase insert completed but did not return the new record id.");
     await addAudit(data.id, "Record created", "Access register entry created.");
-    setRecords((items) => [data as AccessRecord, ...items.filter((item) => item.id !== data.id)]);
+    setRecords((items) => [data, ...items.filter((item) => item.id !== data.id)]);
     await refresh();
-    return data as AccessRecord;
+    return data;
   }
 
   async function updateStatus(id: string, status: AccessStatus) {
