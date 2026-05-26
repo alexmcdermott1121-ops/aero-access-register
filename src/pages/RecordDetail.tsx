@@ -1,15 +1,96 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Archive, CheckCircle2, Edit, RotateCcw, ShieldOff, XCircle } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { useData } from "../lib/DataContext";
-import { AccessStatus } from "../lib/types";
+import { describeSupabaseError, supabase } from "../lib/supabase";
+import type { AccessStatus, AuditLog, AccessRecord } from "../lib/types";
 import { formatDate, formatDateTime } from "../lib/utils";
 
 export function RecordDetail() {
   const { id } = useParams();
-  const { records, auditLogs, updateStatus, canEdit } = useData();
-  const record = records.find((item) => item.id === id);
-  if (!record) return <p>Record not found.</p>;
+  const { records, auditLogs, updateStatus, canEdit, getRecordById } = useData();
+  const localRecord = records.find((item) => item.id === id);
+  const [fetchedRecord, setFetchedRecord] = useState<AccessRecord | null>(null);
+  const [fetchedAuditLogs, setFetchedAuditLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(Boolean(id && !localRecord));
+  const [error, setError] = useState("");
+  const record = localRecord ?? fetchedRecord;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecord() {
+      if (!id || localRecord || fetchedRecord) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+      try {
+        const loadedRecord = await getRecordById(id);
+        if (!cancelled) {
+          setFetchedRecord(loadedRecord);
+          if (!loadedRecord) {
+            setError("No access register record was found for this id. It may have been deleted, archived elsewhere, or blocked by permissions.");
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setError(describeSupabaseError(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadRecord();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, localRecord, fetchedRecord, getRecordById]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAuditLogs() {
+      if (!id || !supabase || auditLogs.some((log) => log.access_record_id === id)) return;
+      const { data, error: auditError } = await supabase
+        .from("access_audit_log")
+        .select("*")
+        .eq("access_record_id", id)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (auditError) {
+        setError(describeSupabaseError(auditError));
+        return;
+      }
+      setFetchedAuditLogs((data ?? []) as AuditLog[]);
+    }
+
+    void loadAuditLogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, auditLogs]);
+
+  const recordAuditLogs = useMemo(
+    () => {
+      const localLogs = auditLogs.filter((log) => log.access_record_id === record?.id);
+      return localLogs.length > 0 ? localLogs : fetchedAuditLogs;
+    },
+    [auditLogs, fetchedAuditLogs, record?.id],
+  );
+
+  if (loading) return <p>Loading access record...</p>;
+  if (!record) {
+    return (
+      <section className="empty-state">
+        <h1>Record not found</h1>
+        <p>{error || "This access record could not be loaded from Supabase."}</p>
+        <Link className="primary icon-text" to="/register">Back to Access Register</Link>
+      </section>
+    );
+  }
 
   const actions: Array<[AccessStatus, typeof CheckCircle2]> = [
     ["Active", CheckCircle2],
@@ -69,7 +150,8 @@ export function RecordDetail() {
       <article className="conditions-panel">
         <h2>Audit Log</h2>
         <div className="audit-list">
-          {auditLogs.filter((log) => log.access_record_id === record.id).map((log) => (
+          {recordAuditLogs.length === 0 ? <p>No audit entries have been recorded for this access record yet.</p> : null}
+          {recordAuditLogs.map((log) => (
             <div className="audit-item" key={log.id}>
               <strong>{log.action}</strong>
               <span>{formatDateTime(log.created_at)}</span>

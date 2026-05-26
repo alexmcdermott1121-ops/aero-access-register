@@ -1,7 +1,8 @@
 import { FormEvent, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Save } from "lucide-react";
 import { useData } from "../lib/DataContext";
+import { describeSupabaseError } from "../lib/supabase";
 import { accessAreas, accessTypes, authoritySources, holderTypes, statuses } from "../lib/types";
 import type { AccessRecord } from "../lib/types";
 
@@ -78,7 +79,15 @@ export function RecordForm() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  if (id && !existing) return <p>Record not found.</p>;
+  if (id && !existing) {
+    return (
+      <section className="empty-state">
+        <h1>Record not loaded</h1>
+        <p>This edit page could not find the record in the current register list. Open it from the Access Register and try again.</p>
+        <Link className="primary icon-text" to="/register">Back to Access Register</Link>
+      </section>
+    );
+  }
 
   function update<K extends keyof RecordInput>(field: K, value: RecordInput[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -93,10 +102,17 @@ export function RecordForm() {
     setSaving(true);
     setMessage("");
     try {
-      const savedId = await saveRecord(cleanRecord(form), id);
-      navigate(`/records/${savedId}`);
+      const savedRecord = await saveRecord(cleanRecord(form), id);
+      navigate("/register", {
+        replace: true,
+        state: {
+          savedMessage: id
+            ? `Access record for ${savedRecord.holder_name} was updated successfully.`
+            : `Access record for ${savedRecord.holder_name} was created successfully.`,
+        },
+      });
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Could not save this record.");
+      setMessage(describeSupabaseError(err));
     } finally {
       setSaving(false);
     }
@@ -129,7 +145,7 @@ export function RecordForm() {
         <label className="wide">Access conditions<textarea value={form.conditions ?? ""} onChange={(event) => update("conditions", event.target.value)} /></label>
         <label className="wide">Notes<textarea value={form.notes ?? ""} onChange={(event) => update("notes", event.target.value)} /></label>
         <label className="wide">Approval email or document link<input value={form.attachment_url ?? ""} onChange={(event) => update("attachment_url", event.target.value)} placeholder="https://..." /></label>
-        {message ? <p className="error-text wide">{message}</p> : null}
+        {message ? <pre className="error-box wide">{message}</pre> : null}
         <div className="form-actions wide">
           <button className="primary icon-text" disabled={saving} type="submit"><Save size={17} />{saving ? "Saving..." : "Save record"}</button>
         </div>

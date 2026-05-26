@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { supabase } from "./supabase";
+import { describeSupabaseError, supabase } from "./supabase";
 import { demoAuditLog, demoRecords } from "./demoData";
 import type { AccessRecord, AccessStatus, AuditLog, AllowedUser } from "./types";
 
@@ -15,7 +15,8 @@ interface DataContextValue {
   demoMode: boolean;
   canEdit: boolean;
   refresh: () => Promise<void>;
-  saveRecord: (record: RecordInput, id?: string) => Promise<string>;
+  getRecordById: (id: string) => Promise<AccessRecord | null>;
+  saveRecord: (record: RecordInput, id?: string) => Promise<AccessRecord>;
   updateStatus: (id: string, status: AccessStatus) => Promise<void>;
 }
 
@@ -81,6 +82,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const getRecordById = useCallback(async (id: string) => {
+    const localRecord = records.find((item) => item.id === id);
+    if (localRecord) return localRecord;
+    if (!supabase || demoMode) return demoRecords.find((item) => item.id === id) ?? null;
+
+    const { data, error: fetchError } = await supabase
+      .from("access_register")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw new Error(describeSupabaseError(fetchError));
+    }
+
+    return (data as AccessRecord | null) ?? null;
+  }, [records, demoMode]);
+
   async function addAudit(access_record_id: string, action: string, details: string) {
     if (!supabase || demoMode) {
       setAuditLogs((logs) => [
@@ -96,11 +115,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ]);
       return;
     }
-    await supabase.from("access_audit_log").insert({
+    const { error: auditError } = await supabase.from("access_audit_log").insert({
       access_record_id,
       action,
       details,
     });
+    if (auditError) setError(`Record saved, but audit log could not be written.\n${describeSupabaseError(auditError)}`);
   }
 
   async function saveRecord(record: RecordInput, id?: string) {
@@ -111,22 +131,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
         : ({ ...record, id: crypto.randomUUID(), created_at: now, updated_at: now } as AccessRecord);
       setRecords((items) => (id ? items.map((item) => (item.id === id ? saved : item)) : [saved, ...items]));
       await addAudit(saved.id, id ? "Record updated" : "Record created", id ? "Access register entry updated." : "Access register entry created.");
-      return saved.id;
+      return saved;
     }
 
     if (id) {
-      const { error: updateError } = await supabase.from("access_register").update(record).eq("id", id);
-      if (updateError) throw updateError;
+      const { data, error: updateError } = await supabase
+        .from("access_register")
+        .update(record)
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (updateError) throw new Error(describeSupabaseError(updateError));
+      if (!data?.id) throw new Error("Supabase update completed but did not return the updated record id.");
       await addAudit(id, "Record updated", "Access register entry updated.");
+      setRecords((items) => items.map((item) => (item.id === id ? (data as AccessRecord) : item)));
       await refresh();
-      return id;
+      return data as AccessRecord;
     }
 
-    const { data, error: insertError } = await supabase.from("access_register").insert(record).select("id").single();
-    if (insertError) throw insertError;
+    const { data, error: insertError } = await supabase
+      .from("access_register")
+      .insert(record)
+      .select("*")
+      .single();
+    if (insertError) throw new Error(describeSupabaseError(insertError));
+    if (!data?.id) throw new Error("Supabase insert completed but did not return the new record id.");
     await addAudit(data.id, "Record created", "Access register entry created.");
+    setRecords((items) => [data as AccessRecord, ...items.filter((item) => item.id !== data.id)]);
     await refresh();
-    return data.id as string;
+    return data as AccessRecord;
   }
 
   async function updateStatus(id: string, status: AccessStatus) {
@@ -142,7 +175,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { error: updateError } = await supabase.from("access_register").update(patch).eq("id", id);
-    if (updateError) throw updateError;
+    if (updateError) throw new Error(describeSupabaseError(updateError));
     await addAudit(id, status === "Returned" ? "Returned" : "Status changed", `Marked ${status.toLowerCase()}.`);
     await refresh();
   }
@@ -155,8 +188,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, saveRecord, updateStatus }),
-    [records, auditLogs, currentUser, loading, error, demoMode, canEdit],
+    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, getRecordById, saveRecord, updateStatus }),
+    [records, auditLogs, currentUser, loading, error, demoMode, canEdit, getRecordById],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

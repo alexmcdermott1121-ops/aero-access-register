@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, Plus } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { useData } from "../lib/DataContext";
@@ -8,6 +8,9 @@ import { formatDate, formatDateTime, isExpiringSoon, isOverdueReturn } from "../
 
 export function Register() {
   const { records } = useData();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const savedMessage = (location.state as { savedMessage?: string } | null)?.savedMessage;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [accessType, setAccessType] = useState("");
@@ -50,6 +53,12 @@ export function Register() {
         </div>
         <Link className="primary icon-text" to="/records/new"><Plus size={18} />Add record</Link>
       </div>
+      {savedMessage ? (
+        <div className="success-banner" role="status">
+          <span>{savedMessage}</span>
+          <button className="secondary" onClick={() => navigate("/register", { replace: true })} type="button">Dismiss</button>
+        </div>
+      ) : null}
 
       <div className="filters">
         <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Holder, company, area, purpose" /></label>
