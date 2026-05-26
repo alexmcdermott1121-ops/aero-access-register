@@ -4,7 +4,7 @@ import { useData } from "../lib/DataContext";
 import { formatDate, isExpiringSoon, isOverdueReturn, toCsv } from "../lib/utils";
 
 export function Reports() {
-  const { records } = useData();
+  const { records, error, loading } = useData();
   const reports = [
     ["Active access report", records.filter((record) => record.status === "Active")],
     ["Expiring soon report", records.filter(isExpiringSoon)],
@@ -31,6 +31,8 @@ export function Reports() {
         </div>
         <button className="primary icon-text" onClick={() => window.print()} type="button"><Printer size={17} />Print</button>
       </div>
+      {error ? <pre className="error-box print-hide">{error}</pre> : null}
+      {loading ? <p className="print-hide">Loading reports...</p> : null}
       {reports.map(([title, rows]) => (
         <article className="report-section" key={title}>
           <div className="report-heading">

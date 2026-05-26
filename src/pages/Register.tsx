@@ -7,7 +7,7 @@ import { accessTypes, holderTypes, statuses } from "../lib/types";
 import { formatDate, formatDateTime, isExpiringSoon, isOverdueReturn } from "../lib/utils";
 
 export function Register() {
-  const { records } = useData();
+  const { records, error, loading, refresh } = useData();
   const location = useLocation();
   const navigate = useNavigate();
   const savedMessage = (location.state as { savedMessage?: string } | null)?.savedMessage;
@@ -59,6 +59,8 @@ export function Register() {
           <button className="secondary" onClick={() => navigate("/register", { replace: true })} type="button">Dismiss</button>
         </div>
       ) : null}
+      {error ? <pre className="error-box">{error}</pre> : null}
+      {loading ? <p>Loading access register records...</p> : null}
 
       <div className="filters">
         <label>Search<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Holder, company, area, purpose" /></label>
@@ -77,6 +79,13 @@ export function Register() {
             </tr>
           </thead>
           <tbody>
+            {!loading && filtered.length === 0 ? (
+              <tr>
+                <td colSpan={16}>
+                  No access register records are currently visible to this signed-in user. If records exist in Supabase, check the error message above for RLS or select-query details.
+                </td>
+              </tr>
+            ) : null}
             {filtered.map((record) => (
               <tr key={record.id}>
                 <td><StatusBadge status={record.status} /></td>
@@ -99,6 +108,9 @@ export function Register() {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="form-actions refresh-actions">
+        <button className="secondary" onClick={() => void refresh()} type="button">Reload records</button>
       </div>
     </section>
   );

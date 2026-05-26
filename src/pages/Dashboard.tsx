@@ -3,7 +3,7 @@ import { useData } from "../lib/DataContext";
 import { isExpiringSoon, isOverdueReturn } from "../lib/utils";
 
 export function Dashboard() {
-  const { records, loading } = useData();
+  const { records, loading, error } = useData();
   const cards = [
     ["Total access records", records.length, Building2],
     ["Active access", records.filter((record) => record.status === "Active").length, CheckCircle2],
@@ -24,6 +24,7 @@ export function Dashboard() {
         </div>
       </div>
       {loading ? <p>Loading register...</p> : null}
+      {error ? <pre className="error-box">{error}</pre> : null}
       <div className="metric-grid">
         {cards.map(([label, value, Icon]) => (
           <article className="metric-card" key={label}>

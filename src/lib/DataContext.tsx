@@ -6,6 +6,30 @@ import type { AccessRecord, AccessStatus, AuditLog, AllowedUser } from "./types"
 
 type RecordInput = Omit<AccessRecord, "id" | "created_at" | "updated_at">;
 
+const accessRegisterColumns = [
+  "id",
+  "holder_name",
+  "holder_type",
+  "company",
+  "contact_details",
+  "access_type",
+  "access_area",
+  "purpose",
+  "approved_by",
+  "authority_source",
+  "approval_date",
+  "start_date",
+  "expiry_date",
+  "return_due_date",
+  "returned_date",
+  "status",
+  "conditions",
+  "notes",
+  "attachment_url",
+  "created_at",
+  "updated_at",
+].join(",");
+
 interface DataContextValue {
   records: AccessRecord[];
   auditLogs: AuditLog[];
@@ -41,7 +65,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       .from("allowed_users")
       .select("id,email,role")
       .eq("email", email.toLowerCase())
-      .single();
+      .maybeSingle();
     if (userError) throw userError;
     return data as AllowedUser;
   }
@@ -53,28 +77,57 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    setLoading(true);
+    const messages: string[] = [];
+
     try {
-      setLoading(true);
-      const allowedUser = await loadAllowedUser();
-      if (!allowedUser) {
+      try {
+        const allowedUser = await loadAllowedUser();
+        setCurrentUser(allowedUser);
+        if (!allowedUser) {
+          messages.push("Signed in, but this email was not found in allowed_users. Reading access_register will still be attempted so any RLS error is shown below.");
+        }
+      } catch (allowedUserError) {
         setCurrentUser(null);
+        messages.push(`allowed_users lookup failed:\n${describeSupabaseError(allowedUserError)}`);
+      }
+
+      const { data: recordData, error: recordError, status, statusText } = await supabase
+        .from("access_register")
+        .select(accessRegisterColumns)
+        .order("updated_at", { ascending: false });
+
+      if (recordError) {
         setRecords([]);
         setAuditLogs([]);
-        setError("");
+        setError(
+          [
+            "access_register select failed. The app is querying Supabase table: access_register.",
+            `HTTP status: ${status}${statusText ? ` ${statusText}` : ""}`,
+            describeSupabaseError(recordError),
+            ...messages,
+          ].join("\n\n"),
+        );
         return;
       }
-      setCurrentUser(allowedUser);
-      const [{ data: recordData, error: recordError }, { data: logData, error: logError }] = await Promise.all([
-        supabase.from("access_register").select("*").order("updated_at", { ascending: false }),
-        supabase.from("access_audit_log").select("*").order("created_at", { ascending: false }),
-      ]);
-      if (recordError) throw recordError;
-      if (logError) throw logError;
+
       setRecords((recordData ?? []) as AccessRecord[]);
-      setAuditLogs((logData ?? []) as AuditLog[]);
-      setError("");
+
+      const { data: logData, error: logError } = await supabase
+        .from("access_audit_log")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (logError) {
+        setAuditLogs([]);
+        messages.push(`access_audit_log select failed, but access_register rows loaded successfully:\n${describeSupabaseError(logError)}`);
+      } else {
+        setAuditLogs((logData ?? []) as AuditLog[]);
+      }
+
+      setError(messages.join("\n\n"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load Supabase data.");
+      setError(`Unexpected register load error:\n${describeSupabaseError(err)}`);
       setRecords(supabase ? [] : demoRecords);
       setAuditLogs(supabase ? [] : demoAuditLog);
     } finally {
