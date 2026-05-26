@@ -13,7 +13,7 @@ const blankRecord: RecordInput = {
   holder_type: "Committee",
   company: "",
   contact_details: "",
-  access_type: "Key",
+  access_type: "Key only",
   access_area: "Common areas",
   purpose: "",
   approved_by: "",

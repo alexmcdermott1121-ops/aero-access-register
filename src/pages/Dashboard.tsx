@@ -11,7 +11,7 @@ export function Dashboard() {
     ["Expiring within 30 days", records.filter(isExpiringSoon).length, Clock],
     ["Overdue return", records.filter(isOverdueReturn).length, AlertTriangle],
     ["Revoked/returned access", records.filter((record) => ["Revoked", "Returned"].includes(record.status)).length, Archive],
-    ["Contractor access records", records.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor Access").length, FileWarning],
+    ["Contractor access records", records.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor / temporary access").length, FileWarning],
     ["Committee/authorised representative access records", records.filter((record) => ["Committee", "Building Manager", "Strata Manager"].includes(record.holder_type)).length, Users],
   ] as const;
 

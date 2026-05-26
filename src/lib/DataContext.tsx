@@ -36,6 +36,7 @@ interface DataContextValue {
   getRecordById: (id: string) => Promise<AccessRecord | null>;
   saveRecord: (record: RecordInput, id?: string) => Promise<AccessRecord>;
   updateStatus: (id: string, status: AccessStatus) => Promise<void>;
+  deleteRecord: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -227,6 +228,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await refresh();
   }
 
+  async function deleteRecord(id: string) {
+    if (currentUser?.role !== "admin") {
+      throw new Error("Only admin users can permanently delete access records.");
+    }
+
+    if (!supabase || demoMode) {
+      setRecords((items) => items.filter((item) => item.id !== id));
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("access_register")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      throw new Error(describeSupabaseError(deleteError));
+    }
+
+    setRecords((items) => items.filter((item) => item.id !== id));
+    await refresh();
+  }
+
   useEffect(() => {
     void refresh();
     if (!supabase) return;
@@ -235,7 +259,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, getRecordById, saveRecord, updateStatus }),
+    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, getRecordById, saveRecord, updateStatus, deleteRecord }),
     [records, auditLogs, currentUser, loading, error, demoMode, canEdit, getRecordById],
   );
 

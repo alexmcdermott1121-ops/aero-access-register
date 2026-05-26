@@ -34,6 +34,7 @@ h2 { font-size: 1.2rem; }
 .primary, .secondary { border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; min-height: 42px; }
 .primary { background: #17436b; color: #ffffff; }
 .secondary { background: #e8edf2; color: #18324f; border: 1px solid #d3dce6; }
+.danger { border: 1px solid #fecdca; border-radius: 8px; padding: 10px 14px; font-weight: 700; min-height: 42px; background: #fef3f2; color: #b42318; }
 .icon-only { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eef3f8; color: #17436b; }
 
 .setup-notice { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px; display: flex; gap: 12px; margin-bottom: 20px; color: #7c2d12; }

@@ -21,23 +21,30 @@ export type HolderType =
   | "Other";
 
 export type AccessType =
-  | "Key"
-  | "Fob"
-  | "Remote"
-  | "Contractor Access"
-  | "Inspection Access"
-  | "Digital Access"
+  | "Key only"
+  | "Fob only"
+  | "Remote only"
+  | "Key + Fob"
+  | "Garage remote + fob"
+  | "Common area access"
+  | "Contractor / temporary access"
+  | "Inspection access"
+  | "Digital / system access"
+  | "Full building access - common areas, garage and services areas"
   | "Other";
 
 export type AccessArea =
   | "Common areas"
-  | "Basement"
+  | "Basement / car park"
   | "Garage"
+  | "Garbage / waste areas"
   | "Plant room"
   | "Roof"
   | "Fire services area"
+  | "Storage / common area"
+  | "Building management areas"
   | "Unit access by consent"
-  | "Storage/common area"
+  | "Full building access - common areas, garage and services areas"
   | "Other";
 
 export type AuthoritySource =
@@ -74,7 +81,7 @@ export interface AccessRecord {
 
 export interface AuditLog {
   id: string;
-  access_record_id: string;
+  access_record_id: string | null;
   action: string;
   details: string | null;
   created_at: string;
@@ -100,24 +107,31 @@ export const holderTypes: HolderType[] = [
 ];
 
 export const accessTypes: AccessType[] = [
-  "Key",
-  "Fob",
-  "Remote",
-  "Contractor Access",
-  "Inspection Access",
-  "Digital Access",
+  "Key only",
+  "Fob only",
+  "Remote only",
+  "Key + Fob",
+  "Garage remote + fob",
+  "Common area access",
+  "Contractor / temporary access",
+  "Inspection access",
+  "Digital / system access",
+  "Full building access - common areas, garage and services areas",
   "Other",
 ];
 
 export const accessAreas: AccessArea[] = [
   "Common areas",
-  "Basement",
+  "Basement / car park",
   "Garage",
+  "Garbage / waste areas",
   "Plant room",
   "Roof",
   "Fire services area",
+  "Storage / common area",
+  "Building management areas",
   "Unit access by consent",
-  "Storage/common area",
+  "Full building access - common areas, garage and services areas",
   "Other",
 ];
 

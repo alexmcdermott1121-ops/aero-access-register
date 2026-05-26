@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Archive, CheckCircle2, Edit, RotateCcw, ShieldOff, XCircle } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Archive, CheckCircle2, Edit, RotateCcw, ShieldOff, Trash2, XCircle } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { useData } from "../lib/DataContext";
 import { describeSupabaseError, supabase } from "../lib/supabase";
@@ -9,13 +9,17 @@ import { formatDate, formatDateTime } from "../lib/utils";
 
 export function RecordDetail() {
   const { id } = useParams();
-  const { records, auditLogs, updateStatus, canEdit, getRecordById } = useData();
+  const navigate = useNavigate();
+  const { records, auditLogs, updateStatus, deleteRecord, canEdit, currentUser, getRecordById } = useData();
   const localRecord = records.find((item) => item.id === id);
   const [fetchedRecord, setFetchedRecord] = useState<AccessRecord | null>(null);
   const [fetchedAuditLogs, setFetchedAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(Boolean(id && !localRecord));
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const record = localRecord ?? fetchedRecord;
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +123,29 @@ export function RecordDetail() {
     ["Last updated", formatDateTime(record.updated_at)],
   ];
 
+  async function handleDelete() {
+    if (!record || !isAdmin) return;
+    const confirmed = window.confirm("This will permanently delete this record. This should only be used for test records or incorrect entries. Continue?");
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError("");
+    setMessage("");
+    try {
+      await deleteRecord(record.id);
+      navigate("/register", {
+        replace: true,
+        state: {
+          savedMessage: `Access record for ${record.holder_name} was permanently deleted.`,
+        },
+      });
+    } catch (err) {
+      setError(describeSupabaseError(err));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <section>
       <div className="page-heading">
@@ -134,7 +161,14 @@ export function RecordDetail() {
             <Icon size={16} />Mark {status.toLowerCase()}
           </button>
         ))}
+        {isAdmin ? (
+          <button className="danger icon-text" disabled={deleting} onClick={() => void handleDelete()} type="button">
+            <Trash2 size={16} />{deleting ? "Deleting..." : "Delete permanently"}
+          </button>
+        ) : null}
       </div>
+      {message ? <div className="success-banner" role="status">{message}</div> : null}
+      {error ? <pre className="error-box">{error}</pre> : null}
       <div className="detail-grid">
         {fields.map(([label, value]) => (
           <div className="detail-item" key={label}>

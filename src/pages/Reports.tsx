@@ -9,7 +9,7 @@ export function Reports() {
     ["Active access report", records.filter((record) => record.status === "Active")],
     ["Expiring soon report", records.filter(isExpiringSoon)],
     ["Overdue return report", records.filter(isOverdueReturn)],
-    ["Contractor access report", records.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor Access")],
+    ["Contractor access report", records.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor / temporary access")],
   ] as const;
 
   function exportCsv(name: string, rows: typeof records) {
