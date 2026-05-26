@@ -19,7 +19,7 @@ export function RecordDetail() {
   const [message, setMessage] = useState("");
   const [deleting, setDeleting] = useState(false);
   const record = localRecord ?? fetchedRecord;
-  const isAdmin = currentUser?.role === "admin";
+  const canPermanentlyDelete = currentUser?.email?.toLowerCase() === "alexmcdermott1121@gmail.com";
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +124,11 @@ export function RecordDetail() {
   ];
 
   async function handleDelete() {
-    if (!record || !isAdmin) return;
+    if (!record) return;
+    if (!canPermanentlyDelete) {
+      setError("Permanent delete is restricted to alexmcdermott1121@gmail.com. Use Archive for normal admin record retirement.");
+      return;
+    }
     const confirmed = window.confirm("This will permanently delete this record. This should only be used for test records or incorrect entries. Continue?");
     if (!confirmed) return;
 
@@ -161,7 +165,7 @@ export function RecordDetail() {
             <Icon size={16} />Mark {status.toLowerCase()}
           </button>
         ))}
-        {isAdmin ? (
+        {canPermanentlyDelete ? (
           <button className="danger icon-text" disabled={deleting} onClick={() => void handleDelete()} type="button">
             <Trash2 size={16} />{deleting ? "Deleting..." : "Delete permanently"}
           </button>

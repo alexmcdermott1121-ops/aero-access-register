@@ -5,6 +5,7 @@ import { demoAuditLog, demoRecords } from "./demoData";
 import type { AccessRecord, AccessStatus, AuditLog, AllowedUser } from "./types";
 
 type RecordInput = Omit<AccessRecord, "id" | "created_at" | "updated_at">;
+const permanentDeleteEmail = "alexmcdermott1121@gmail.com";
 
 function isAccessRecord(value: unknown): value is AccessRecord {
   return Boolean(
@@ -229,8 +230,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteRecord(id: string) {
-    if (currentUser?.role !== "admin") {
-      throw new Error("Only admin users can permanently delete access records.");
+    if (currentUser?.email?.toLowerCase() !== permanentDeleteEmail) {
+      throw new Error("Permanent delete is restricted to alexmcdermott1121@gmail.com. Use Archive for normal admin record retirement.");
     }
 
     if (!supabase || demoMode) {

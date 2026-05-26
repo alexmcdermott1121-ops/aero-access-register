@@ -136,11 +136,12 @@ using (public.is_admin_allowed_user())
 with check (public.is_admin_allowed_user());
 
 drop policy if exists "admins can delete access register records" on public.access_register;
-create policy "admins can delete access register records"
+drop policy if exists "alex can delete access register records" on public.access_register;
+create policy "alex can delete access register records"
 on public.access_register
 for delete
 to authenticated
-using (public.is_admin_allowed_user());
+using (lower(auth.jwt() ->> 'email') = 'alexmcdermott1121@gmail.com');
 
 drop policy if exists "allowed users can read audit log" on public.access_audit_log;
 create policy "allowed users can read audit log"
