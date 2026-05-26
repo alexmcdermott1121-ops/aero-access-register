@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { KeyRound, Lock, Wifi } from "lucide-react";
+import { KeyRound, Lock, Mail, Wifi } from "lucide-react";
 import {
   describeSupabaseError,
   getMaskedSupabaseKey,
@@ -19,6 +19,8 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connectionMessage, setConnectionMessage] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   if (currentUser) return <Navigate to="/" replace />;
 
@@ -81,6 +83,36 @@ export function Login() {
     }
   }
 
+  async function sendPasswordReset() {
+    setResetMessage("");
+    setMessage("");
+
+    if (!email) {
+      setMessage("Enter your email address first, then select Forgot password.");
+      return;
+    }
+
+    if (!supabase) {
+      setMessage("Supabase is not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (resetError) {
+        setMessage(describeSupabaseError(resetError));
+        return;
+      }
+      setResetMessage("Password reset email sent. Check your inbox.");
+    } catch (resetError) {
+      setMessage(describeSupabaseError(resetError));
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   return (
     <main className="login-page">
       <section className="login-panel">
@@ -115,7 +147,11 @@ export function Login() {
               <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required />
             </label>
             {message || error ? <pre className="error-box">{message || error}</pre> : null}
+            {resetMessage ? <div className="success-banner" role="status">{resetMessage}</div> : null}
             <button className="primary" disabled={loading} type="submit">{loading ? "Signing in..." : "Sign in"}</button>
+            <button className="link-button icon-text" disabled={resetLoading} onClick={() => void sendPasswordReset()} type="button">
+              <Mail size={16} />{resetLoading ? "Sending reset email..." : "Forgot password?"}
+            </button>
           </form>
         )}
         <button className="secondary icon-text test-button" disabled={testing || !isSupabaseConfigured} onClick={testConnection} type="button">

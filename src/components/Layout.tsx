@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BarChart3, KeyRound, LayoutDashboard, LogOut, PlusCircle, ShieldCheck } from "lucide-react";
+import { BarChart3, KeyRound, LayoutDashboard, LogOut, PlusCircle, Settings, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../lib/DataContext";
 import { SetupNotice } from "./SetupNotice";
@@ -28,6 +28,7 @@ export function Layout() {
           <NavLink to="/register"><KeyRound size={18} />Access Register</NavLink>
           <NavLink to="/records/new"><PlusCircle size={18} />Add Record</NavLink>
           <NavLink to="/reports"><BarChart3 size={18} />Reports</NavLink>
+          <NavLink to="/account"><Settings size={18} />Account</NavLink>
         </nav>
         <div className="sidebar-footer">
           <span>{demoMode ? "Demo/setup mode" : currentUser?.email}</span>

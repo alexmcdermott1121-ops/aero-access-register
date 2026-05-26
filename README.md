@@ -110,6 +110,18 @@ Recommended beginner method: connect this project to GitHub, then let Netlify bu
    - `VITE_SUPABASE_ANON_KEY` = your Supabase publishable anon key
 5. Redeploy the site.
 
+## 9. Configure password reset redirects
+
+For the **Forgot password?** email flow, Supabase must allow your deployed app URL.
+
+1. In Supabase, go to **Authentication**.
+2. Open **URL Configuration**.
+3. Add your Netlify site URL to the allowed redirect URLs.
+4. Also add the reset page URL, for example:
+   - `https://your-netlify-site.netlify.app/reset-password`
+
+The app sends password reset emails with the redirect URL set to `/reset-password` on the current deployed site.
+
 ## Security warning
 
 Never expose the Supabase `service_role` key in the frontend, Netlify public variables, or browser code. This app only uses:

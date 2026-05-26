@@ -9,6 +9,8 @@ import { Register } from "./pages/Register";
 import { RecordForm } from "./pages/RecordForm";
 import { RecordDetail } from "./pages/RecordDetail";
 import { Reports } from "./pages/Reports";
+import { Account } from "./pages/Account";
+import { ResetPassword } from "./pages/ResetPassword";
 import "./styles.css";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -24,6 +26,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <DataProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/"
             element={
@@ -38,6 +41,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="records/:id" element={<RecordDetail />} />
             <Route path="records/:id/edit" element={<RecordForm />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="account" element={<Account />} />
           </Route>
         </Routes>
       </DataProvider>
