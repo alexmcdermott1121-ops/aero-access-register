@@ -18,6 +18,7 @@ const blankRecord: RecordInput = {
   purpose: "",
   approved_by: "",
   authority_source: "Committee approval",
+  approval_reference: "",
   approval_date: "",
   start_date: "",
   expiry_date: "",
@@ -41,6 +42,7 @@ function toRecordInput(record?: AccessRecord): RecordInput {
     purpose: record.purpose,
     approved_by: record.approved_by,
     authority_source: record.authority_source,
+    approval_reference: record.approval_reference,
     approval_date: record.approval_date,
     start_date: record.start_date,
     expiry_date: record.expiry_date,
@@ -59,6 +61,7 @@ function cleanRecord(record: RecordInput): RecordInput {
     company: record.company || null,
     contact_details: record.contact_details || null,
     approved_by: record.approved_by || null,
+    approval_reference: record.approval_reference || null,
     approval_date: record.approval_date || null,
     start_date: record.start_date || null,
     expiry_date: record.expiry_date || null,
@@ -76,6 +79,7 @@ export function RecordForm() {
   const { records, saveRecord, canEdit } = useData();
   const existing = useMemo(() => records.find((record) => record.id === id), [records, id]);
   const [form, setForm] = useState<RecordInput>(toRecordInput(existing));
+  const [sensitiveInfoConfirmed, setSensitiveInfoConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -97,6 +101,10 @@ export function RecordForm() {
     event.preventDefault();
     if (!canEdit) {
       setMessage("Your account has read-only access.");
+      return;
+    }
+    if (!sensitiveInfoConfirmed) {
+      setMessage("Please confirm this record does not contain sensitive access credentials before saving.");
       return;
     }
     setSaving(true);
@@ -134,8 +142,10 @@ export function RecordForm() {
         <label>Access type<select value={form.access_type} onChange={(event) => update("access_type", event.target.value as RecordInput["access_type"])}>{accessTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label>Access area<select value={form.access_area} onChange={(event) => update("access_area", event.target.value as RecordInput["access_area"])}>{accessAreas.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label className="wide">Purpose of access<input required value={form.purpose} onChange={(event) => update("purpose", event.target.value)} /></label>
-        <label>Approved by<input value={form.approved_by ?? ""} onChange={(event) => update("approved_by", event.target.value)} /></label>
         <label>Authority source<select value={form.authority_source} onChange={(event) => update("authority_source", event.target.value as RecordInput["authority_source"])}>{authoritySources.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label>Approval reference<input value={form.approval_reference ?? ""} onChange={(event) => update("approval_reference", event.target.value)} placeholder="Minute number, email subject, work order" /></label>
+        <label>Approval email or document link<input value={form.attachment_url ?? ""} onChange={(event) => update("attachment_url", event.target.value)} placeholder="https://..." /></label>
+        <label>Approved by<input value={form.approved_by ?? ""} onChange={(event) => update("approved_by", event.target.value)} /></label>
         <label>Approval date<input type="date" value={form.approval_date ?? ""} onChange={(event) => update("approval_date", event.target.value)} /></label>
         <label>Start date<input type="date" value={form.start_date ?? ""} onChange={(event) => update("start_date", event.target.value)} /></label>
         <label>Expiry date<input type="date" value={form.expiry_date ?? ""} onChange={(event) => update("expiry_date", event.target.value)} /></label>
@@ -144,7 +154,10 @@ export function RecordForm() {
         <label>Status<select value={form.status} onChange={(event) => update("status", event.target.value as RecordInput["status"])}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label className="wide">Access conditions<textarea value={form.conditions ?? ""} onChange={(event) => update("conditions", event.target.value)} /></label>
         <label className="wide">Notes<textarea value={form.notes ?? ""} onChange={(event) => update("notes", event.target.value)} /></label>
-        <label className="wide">Approval email or document link<input value={form.attachment_url ?? ""} onChange={(event) => update("attachment_url", event.target.value)} placeholder="https://..." /></label>
+        <label className="wide check sensitive-confirmation">
+          <input checked={sensitiveInfoConfirmed} onChange={(event) => setSensitiveInfoConfirmed(event.target.checked)} required type="checkbox" />
+          I confirm this record does not contain passcodes, alarm codes, lockbox codes, safe codes, key cut details or other sensitive access credentials.
+        </label>
         {message ? <pre className="error-box wide">{message}</pre> : null}
         <div className="form-actions wide">
           <button className="primary icon-text" disabled={saving} type="submit"><Save size={17} />{saving ? "Saving..." : "Save record"}</button>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Archive, CheckCircle2, Edit, RotateCcw, ShieldOff, Trash2, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Edit, Hourglass, RotateCcw, ShieldOff, Trash2 } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { useData } from "../lib/DataContext";
 import { describeSupabaseError, supabase } from "../lib/supabase";
@@ -10,7 +10,7 @@ import { formatDate, formatDateTime } from "../lib/utils";
 export function RecordDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { records, auditLogs, updateStatus, deleteRecord, canEdit, currentUser, getRecordById } = useData();
+  const { records, auditLogs, updateStatus, archiveRecord, deleteRecord, canEdit, currentUser, getRecordById } = useData();
   const localRecord = records.find((item) => item.id === id);
   const [fetchedRecord, setFetchedRecord] = useState<AccessRecord | null>(null);
   const [fetchedAuditLogs, setFetchedAuditLogs] = useState<AuditLog[]>([]);
@@ -97,11 +97,12 @@ export function RecordDetail() {
   }
 
   const actions: Array<[AccessStatus, typeof CheckCircle2]> = [
+    ["Approved", CheckCircle2],
+    ["Issued", CheckCircle2],
     ["Active", CheckCircle2],
     ["Returned", RotateCcw],
+    ["Expired", Hourglass],
     ["Revoked", ShieldOff],
-    ["Lost", XCircle],
-    ["Archived", Archive],
   ];
 
   const fields = [
@@ -114,6 +115,7 @@ export function RecordDetail() {
     ["Purpose", record.purpose],
     ["Approved by", record.approved_by],
     ["Authority source", record.authority_source],
+    ["Approval reference", record.approval_reference],
     ["Approval date", formatDate(record.approval_date)],
     ["Start date", formatDate(record.start_date)],
     ["Expiry date", formatDate(record.expiry_date)],
@@ -129,7 +131,7 @@ export function RecordDetail() {
       setError("Permanent delete is restricted to alexmcdermott1121@gmail.com. Use Archive for normal admin record retirement.");
       return;
     }
-    const confirmed = window.confirm("This will permanently delete this record. This should only be used for test records or incorrect entries. Continue?");
+    const confirmed = window.confirm("Are you sure you want to permanently delete this record? Archiving is recommended instead.");
     if (!confirmed) return;
 
     setDeleting(true);
@@ -165,6 +167,9 @@ export function RecordDetail() {
             <Icon size={16} />Mark {status.toLowerCase()}
           </button>
         ))}
+        <button className="secondary icon-text" disabled={!canEdit || record.status === "Archived"} onClick={() => void archiveRecord(record.id)} type="button">
+          <Archive size={16} />Archive
+        </button>
         {canPermanentlyDelete ? (
           <button className="danger icon-text" disabled={deleting} onClick={() => void handleDelete()} type="button">
             <Trash2 size={16} />{deleting ? "Deleting..." : "Delete permanently"}

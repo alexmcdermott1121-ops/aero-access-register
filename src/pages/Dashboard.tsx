@@ -1,18 +1,22 @@
 import { AlertTriangle, Archive, Building2, CheckCircle2, Clock, FileWarning, Hourglass, Users } from "lucide-react";
 import { useData } from "../lib/DataContext";
-import { isExpiringSoon, isOverdueReturn } from "../lib/utils";
+import { isActiveAccess, isExpiredButNotReturned, isExpiringWithin, isOverdueReturn } from "../lib/utils";
 
 export function Dashboard() {
   const { records, loading, error } = useData();
+  const currentRecords = records.filter((record) => record.status !== "Archived");
   const cards = [
-    ["Total access records", records.length, Building2],
-    ["Active access", records.filter((record) => record.status === "Active").length, CheckCircle2],
-    ["Pending approval", records.filter((record) => record.status === "Pending approval").length, Hourglass],
-    ["Expiring within 30 days", records.filter(isExpiringSoon).length, Clock],
-    ["Overdue return", records.filter(isOverdueReturn).length, AlertTriangle],
-    ["Revoked/returned access", records.filter((record) => ["Revoked", "Returned"].includes(record.status)).length, Archive],
-    ["Contractor access records", records.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor / temporary access").length, FileWarning],
-    ["Committee/authorised representative access records", records.filter((record) => ["Committee", "Building Manager", "Strata Manager"].includes(record.holder_type)).length, Users],
+    ["Current access records", currentRecords.length, Building2],
+    ["Active access", currentRecords.filter(isActiveAccess).length, CheckCircle2],
+    ["Pending approval", currentRecords.filter((record) => record.status === "Pending approval").length, Hourglass],
+    ["Expiring within 7 days", currentRecords.filter((record) => isExpiringWithin(record, 7)).length, Clock],
+    ["Expiring within 30 days", currentRecords.filter((record) => isExpiringWithin(record, 30)).length, Clock],
+    ["Overdue return", currentRecords.filter(isOverdueReturn).length, AlertTriangle],
+    ["Expired but not returned", currentRecords.filter(isExpiredButNotReturned).length, AlertTriangle],
+    ["Returned access", currentRecords.filter((record) => record.status === "Returned").length, Archive],
+    ["Contractor access records", currentRecords.filter((record) => record.holder_type === "Contractor" || record.access_type === "Contractor / temporary access").length, FileWarning],
+    ["Committee/authorised representative access records", currentRecords.filter((record) => ["Committee", "Building Manager", "Strata Manager"].includes(record.holder_type)).length, Users],
+    ["Archived records", records.filter((record) => record.status === "Archived").length, Archive],
   ] as const;
 
   return (

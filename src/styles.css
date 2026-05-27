@@ -26,6 +26,7 @@ button:disabled { cursor: not-allowed; opacity: 0.6; }
 .content { padding: 28px; overflow-x: hidden; }
 
 .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin: 0 0 22px; }
+.heading-actions, .row-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 h1, h2 { color: #12263f; margin: 0; line-height: 1.15; letter-spacing: 0; }
 h1 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
 h2 { font-size: 1.2rem; }
@@ -35,7 +36,7 @@ h2 { font-size: 1.2rem; }
 .primary { background: #17436b; color: #ffffff; }
 .secondary { background: #e8edf2; color: #18324f; border: 1px solid #d3dce6; }
 .danger { border: 1px solid #fecdca; border-radius: 8px; padding: 10px 14px; font-weight: 700; min-height: 42px; background: #fef3f2; color: #b42318; }
-.icon-only { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #eef3f8; color: #17436b; }
+.icon-only { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 8px; background: #eef3f8; color: #17436b; padding: 0; }
 
 .setup-notice { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px; display: flex; gap: 12px; margin-bottom: 20px; color: #7c2d12; }
 .setup-notice p { margin: 5px 0 0; }
@@ -55,12 +56,13 @@ h2 { font-size: 1.2rem; }
 .metric-card span { color: #5b6777; }
 .metric-card strong { color: #12263f; font-size: 2rem; line-height: 1; }
 
-.filters { background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; display: grid; grid-template-columns: 2fr repeat(3, 1fr) auto auto; gap: 12px; align-items: end; margin-bottom: 16px; }
+.filters { background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; display: grid; grid-template-columns: 2fr repeat(6, minmax(150px, 1fr)) auto auto; gap: 12px; align-items: end; margin-bottom: 16px; }
 label { display: grid; gap: 6px; color: #344054; font-weight: 650; font-size: 0.88rem; }
 input, select, textarea { width: 100%; border: 1px solid #cbd5df; border-radius: 8px; padding: 10px 11px; background: #ffffff; color: #1e293b; }
 textarea { min-height: 94px; resize: vertical; }
 .check { display: flex; align-items: center; gap: 8px; min-height: 42px; }
 .check input { width: auto; }
+.sensitive-confirmation { align-items: flex-start; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; color: #713f12; }
 
 .table-wrap { overflow-x: auto; background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; }
 table { width: 100%; border-collapse: collapse; min-width: 1120px; }
@@ -69,9 +71,9 @@ th { color: #32465c; background: #f0f3f6; white-space: nowrap; }
 td { color: #27364a; }
 
 .badge { display: inline-flex; white-space: nowrap; border-radius: 999px; padding: 4px 9px; font-size: 0.78rem; font-weight: 800; background: #e8edf2; color: #344054; }
-.badge-active, .badge-approved { background: #dcfce7; color: #166534; }
-.badge-pending-approval, .badge-expiring-soon { background: #fef3c7; color: #92400e; }
-.badge-overdue-return, .badge-lost { background: #fee2e2; color: #991b1b; }
+.badge-active, .badge-approved, .badge-issued { background: #dcfce7; color: #166534; }
+.badge-pending-approval { background: #fef3c7; color: #92400e; }
+.badge-expired { background: #fee2e2; color: #991b1b; }
 .badge-returned { background: #dbeafe; color: #1d4ed8; }
 .badge-revoked, .badge-archived { background: #e5e7eb; color: #374151; }
 
@@ -105,6 +107,8 @@ td { color: #27364a; }
 .login-panel .primary { width: 100%; justify-content: center; }
 .test-button { width: 100%; justify-content: center; margin-top: 12px; }
 .link-button { border: 0; background: transparent; color: #17436b; font-weight: 800; justify-content: center; padding: 6px; }
+.debug-login-tools { display: grid; gap: 8px; justify-items: center; margin-top: 10px; color: #64748b; }
+.debug-text-button { border: 0; background: transparent; color: #64748b; font-size: 0.78rem; padding: 4px; text-decoration: underline; min-height: 0; }
 .account-panel { display: grid; gap: 18px; max-width: 720px; }
 .account-form { background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
 .account-form h2 { display: inline-flex; align-items: center; gap: 8px; }

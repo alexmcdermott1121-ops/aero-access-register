@@ -1,12 +1,11 @@
 export type AccessStatus =
   | "Pending approval"
   | "Approved"
+  | "Issued"
   | "Active"
-  | "Expiring soon"
-  | "Overdue return"
   | "Returned"
+  | "Expired"
   | "Revoked"
-  | "Lost"
   | "Archived";
 
 export type HolderType =
@@ -66,6 +65,7 @@ export interface AccessRecord {
   purpose: string;
   approved_by: string | null;
   authority_source: AuthoritySource;
+  approval_reference: string | null;
   approval_date: string | null;
   start_date: string | null;
   expiry_date: string | null;
@@ -147,11 +147,10 @@ export const authoritySources: AuthoritySource[] = [
 export const statuses: AccessStatus[] = [
   "Pending approval",
   "Approved",
+  "Issued",
   "Active",
-  "Expiring soon",
-  "Overdue return",
   "Returned",
+  "Expired",
   "Revoked",
-  "Lost",
   "Archived",
 ];

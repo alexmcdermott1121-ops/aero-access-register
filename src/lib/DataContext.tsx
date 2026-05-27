@@ -22,7 +22,12 @@ function isAccessRecord(value: unknown): value is AccessRecord {
 }
 
 function toAccessRecords(data: unknown): AccessRecord[] {
-  return Array.isArray(data) ? data.filter(isAccessRecord) : [];
+  return Array.isArray(data)
+    ? data.filter(isAccessRecord).map((record) => ({
+        ...record,
+        approval_reference: "approval_reference" in record ? record.approval_reference : null,
+      }))
+    : [];
 }
 
 interface DataContextValue {
@@ -37,6 +42,7 @@ interface DataContextValue {
   getRecordById: (id: string) => Promise<AccessRecord | null>;
   saveRecord: (record: RecordInput, id?: string) => Promise<AccessRecord>;
   updateStatus: (id: string, status: AccessStatus) => Promise<void>;
+  archiveRecord: (id: string) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
 }
 
@@ -220,13 +226,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
           item.id === id ? { ...item, ...patch, updated_at: new Date().toISOString() } : item,
         ),
       );
-      await addAudit(id, status, `Marked ${status.toLowerCase()}.`);
+      await addAudit(id, status === "Archived" ? "Record archived" : status, `Marked ${status.toLowerCase()}.`);
       return;
     }
     const { error: updateError } = await supabase.from("access_register").update(patch).eq("id", id);
     if (updateError) throw new Error(describeSupabaseError(updateError));
-    await addAudit(id, status === "Returned" ? "Returned" : "Status changed", `Marked ${status.toLowerCase()}.`);
+    await addAudit(id, status === "Archived" ? "Record archived" : status === "Returned" ? "Returned" : "Status changed", `Marked ${status.toLowerCase()}.`);
     await refresh();
+  }
+
+  async function archiveRecord(id: string) {
+    await updateStatus(id, "Archived");
   }
 
   async function deleteRecord(id: string) {
@@ -236,8 +246,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     if (!supabase || demoMode) {
       setRecords((items) => items.filter((item) => item.id !== id));
+      await addAudit(id, "Record deleted", "Access register entry permanently deleted.");
       return;
     }
+
+    await addAudit(id, "Record deleted", "Access register entry permanently deleted.");
 
     const { error: deleteError } = await supabase
       .from("access_register")
@@ -260,7 +273,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, getRecordById, saveRecord, updateStatus, deleteRecord }),
+    () => ({ records, auditLogs, currentUser, loading, error, demoMode, canEdit, refresh, getRecordById, saveRecord, updateStatus, archiveRecord, deleteRecord }),
     [records, auditLogs, currentUser, loading, error, demoMode, canEdit, getRecordById],
   );
 

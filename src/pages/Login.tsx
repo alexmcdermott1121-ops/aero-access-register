@@ -1,18 +1,26 @@
 import { FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { KeyRound, Lock, Mail, Wifi } from "lucide-react";
+import { KeyRound, Lock, Mail } from "lucide-react";
 import {
   describeSupabaseError,
-  getMaskedSupabaseKey,
   isSupabaseConfigured,
   supabase,
-  supabaseAnonKey,
-  supabaseUrl,
 } from "../lib/supabase";
 import { useData } from "../lib/DataContext";
 
+function cleanLoginError(error: unknown) {
+  const text = describeSupabaseError(error).toLowerCase();
+  if (text.includes("invalid login") || text.includes("invalid credentials") || text.includes("email not confirmed")) {
+    return "Invalid email or password.";
+  }
+  if (text.includes("not authorised") || text.includes("not authorized") || text.includes("allowed_users")) {
+    return "This email is not authorised to access this register. Please contact the register administrator.";
+  }
+  return "Unable to connect at the moment. Please try again shortly.";
+}
+
 export function Login() {
-  const { currentUser, demoMode, error } = useData();
+  const { currentUser } = useData();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -21,13 +29,14 @@ export function Login() {
   const [connectionMessage, setConnectionMessage] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const showDebug = new URLSearchParams(window.location.search).get("debug") === "true";
 
   if (currentUser) return <Navigate to="/" replace />;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!supabase) {
-      setMessage("Supabase is not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify.");
+      setMessage("Unable to connect at the moment. Please try again shortly.");
       return;
     }
     setLoading(true);
@@ -35,10 +44,28 @@ export function Login() {
     try {
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       if (loginError) {
-        setMessage(describeSupabaseError(loginError));
+        setMessage(cleanLoginError(loginError));
+        return;
+      }
+
+      const { data: allowedUser, error: allowedError } = await supabase
+        .from("allowed_users")
+        .select("email")
+        .eq("email", email.toLowerCase())
+        .maybeSingle();
+
+      if (allowedError) {
+        setMessage(cleanLoginError(allowedError));
+        await supabase.auth.signOut();
+        return;
+      }
+
+      if (!allowedUser) {
+        setMessage("This email is not authorised to access this register. Please contact the register administrator.");
+        await supabase.auth.signOut();
       }
     } catch (loginError) {
-      setMessage(describeSupabaseError(loginError));
+      setMessage(cleanLoginError(loginError));
     } finally {
       setLoading(false);
     }
@@ -46,7 +73,7 @@ export function Login() {
 
   async function testConnection() {
     if (!supabase) {
-      setConnectionMessage("Supabase is not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify.");
+      setConnectionMessage("Unable to connect at the moment.");
       return;
     }
     setTesting(true);
@@ -93,7 +120,7 @@ export function Login() {
     }
 
     if (!supabase) {
-      setMessage("Supabase is not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify.");
+      setMessage("Unable to connect at the moment. Please try again shortly.");
       return;
     }
 
@@ -102,12 +129,12 @@ export function Login() {
       const redirectTo = `${window.location.origin}/reset-password`;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (resetError) {
-        setMessage(describeSupabaseError(resetError));
+        setMessage("Unable to connect at the moment. Please try again shortly.");
         return;
       }
       setResetMessage("Password reset email sent. Check your inbox.");
     } catch (resetError) {
-      setMessage(describeSupabaseError(resetError));
+      setMessage("Unable to connect at the moment. Please try again shortly.");
     } finally {
       setResetLoading(false);
     }
@@ -119,46 +146,31 @@ export function Login() {
         <div className="login-mark"><KeyRound size={30} /></div>
         <h1>AERO Key & Access Register</h1>
         <p className="private-note"><Lock size={16} />Private register. Authorised users only.</p>
-        <div className="debug-panel">
-          <strong>Supabase runtime settings</strong>
-          <span>URL: {supabaseUrl || "Missing VITE_SUPABASE_URL"}</span>
-          <span>Anon key: {getMaskedSupabaseKey()}</span>
-          <span>Configured: {isSupabaseConfigured ? "Yes" : "No"}</span>
-          {!supabaseUrl || !supabaseAnonKey ? (
-            <p className="error-text">
-              Missing runtime environment variable{!supabaseUrl && !supabaseAnonKey ? "s" : ""}:{" "}
-              {!supabaseUrl ? "VITE_SUPABASE_URL " : ""}
-              {!supabaseAnonKey ? "VITE_SUPABASE_ANON_KEY" : ""}
-            </p>
-          ) : null}
-        </div>
-        {!isSupabaseConfigured ? (
-          <div className="setup-notice compact">
-            Add Supabase environment variables to enable secure login. In Netlify, set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <label>
-              Email
-              <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
-            </label>
-            <label>
-              Password
-              <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required />
-            </label>
-            {message || error ? <pre className="error-box">{message || error}</pre> : null}
-            {resetMessage ? <div className="success-banner" role="status">{resetMessage}</div> : null}
-            <button className="primary" disabled={loading} type="submit">{loading ? "Signing in..." : "Sign in"}</button>
-            <button className="link-button icon-text" disabled={resetLoading} onClick={() => void sendPasswordReset()} type="button">
-              <Mail size={16} />{resetLoading ? "Sending reset email..." : "Forgot password?"}
-            </button>
-          </form>
-        )}
-        <button className="secondary icon-text test-button" disabled={testing || !isSupabaseConfigured} onClick={testConnection} type="button">
-          <Wifi size={16} />{testing ? "Testing..." : "Test Supabase connection"}
-        </button>
-        {connectionMessage ? <pre className="debug-result">{connectionMessage}</pre> : null}
+        <form onSubmit={handleSubmit}>
+          <label>
+            Email
+            <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required />
+          </label>
+          <label>
+            Password
+            <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required />
+          </label>
+          {message ? <pre className="error-box">{message}</pre> : null}
+          {resetMessage ? <div className="success-banner" role="status">{resetMessage}</div> : null}
+          <button className="primary" disabled={loading || !isSupabaseConfigured} type="submit">{loading ? "Signing in..." : "Sign in"}</button>
+          <button className="link-button icon-text" disabled={resetLoading} onClick={() => void sendPasswordReset()} type="button">
+            <Mail size={16} />{resetLoading ? "Sending reset email..." : "Forgot password?"}
+          </button>
+        </form>
       </section>
+      {showDebug ? (
+        <div className="debug-login-tools">
+          <button className="debug-text-button" disabled={testing || !isSupabaseConfigured} onClick={testConnection} type="button">
+            {testing ? "Testing..." : "Test connection"}
+          </button>
+          {connectionMessage ? <pre className="debug-result">{connectionMessage}</pre> : null}
+        </div>
+      ) : null}
     </main>
   );
 }
